@@ -55,8 +55,9 @@ sector_theme <- sqlQuery(EFI_ANALYTICS,"SELECT  [WB Project ID],[WB Sector Code]
                  FROM Operations.Sector_Theme")
 
 names(sector_theme) <- gsub(" ","_",names(sector_theme))
-#projects_extra <- sqlQuery(EFI_ANALYTICS,"SELECT top 100 * FROM Operations.Project")
+#projects_extra <- sqlQuery(EFI_ANALYTICS,"SELECT top 100 * FROM Operations.Project WHERE [IFC Project ID] > 0")
 #efi_mou <- sqlQuery(EFI_ANALYTICS,"SELECT top 100 * FROM Operations.EFI_MOU")
+#countries <- sqlQuery(EFI_ANALYTICS, "SELECT * FROM Reference.Country")
 
 projects <- left_join(projects,sort,c("WB_Project_ID" = "Project_ID")) %>% 
   left_join(supervision, c("WB_Project_ID" = "WB_Supervision_Project_ID")) %>% 
@@ -75,31 +76,35 @@ write.csv(TCprojects, "outputFiles/TCprojects.csv",row.names=FALSE)
 # TABLE 2 -----------------------------------------------------------------
 # IFC projects ------------------------------------------------------------
 
-# fil <- filter(ifc_gpDEL, PROJ_ID=="593247" & Report_Date == "2015-12-31 EST")
-# write.csv(fil, "C:/Users/asanchezrodelgo/Desktop/egyptIFC.csv",row.names = FALSE)
-# connection
-ch <- odbcConnect("WBG_Portfolio_Operations")
-
 # IFC projects: write query so it returns latest Report_date group_by(PROJ_ID)
-ifc_gp <- sqlQuery(ch,"select PROJ_ID, FY_OF_ASIP_APPROVAL, PROJECT_STAGE, PROJECT_NAME, PROJECT_STATUS, PROJECT_TYPE, 
-                   PROJECT_CLASSIFICATION_TYPE, PRODUCT_NAME, PROJECT_LEADER, IMPLEMENTATION_END_DATE, 
-                   PRORATED_TOTAL_FYTD_EXPENSE,ITD_EXPENDITURES,
-                   REGION_CODE, ASIP_APPROVAL_DATE, COUNTRY_CODE, IFC_WBG_JOINT_PROJECT, TOTAL_PROJECT_SIZE, 
-                   PRIMARY_BUSINESS_LINE_CODE, TOTAL_FUNDING, TOTAL_FUNDS_MANAGED_BY_IFC, Report_Date
-                   from ifc_gp
-                   ")
-ifc_gp$IMPLEMENTATION_END_DATE <- as.character(ifc_gp$IMPLEMENTATION_END_DATE)
-ifc_gp$ASIP_APPROVAL_DATE <- as.character(ifc_gp$ASIP_APPROVAL_DATE)
-ifc_gp$Report_Date <- as.character(ifc_gp$Report_Date)
+ifc_gp <- sqlQuery(EFI_ANALYTICS,
+                     "SELECT [IFC Project ID],[IFC ASIP Approval Date], [IFC Project Stage],[IFC Project Name],[IFC Project Status],
+                     [IFC Project Type],[IFC Project Classification Type],[IFC Product Name],[IFC Project Leader],[IFC Implementation End Date],
+                     [IFC FYTD Expenditure],[IFC Region Code],[IFC ASIP Approval Date],[IFC Country],[WB Joint IFC Flag],
+                     [IFC Total Project Size],[IFC Primary BL Code],[IFC Total Funds Managed by IFC],[IFC Report Date]
+                     FROM Operations.Project 
+                     ")
+names(ifc_gp) <- gsub(" ","_",names(ifc_gp))
+
+# ifc_gp <- sqlQuery(ch,"select PROJ_ID, FY_OF_ASIP_APPROVAL, PROJECT_STAGE, PROJECT_NAME, PROJECT_STATUS, PROJECT_TYPE, 
+#                    PROJECT_CLASSIFICATION_TYPE, PRODUCT_NAME, PROJECT_LEADER, IMPLEMENTATION_END_DATE, 
+#                    PRORATED_TOTAL_FYTD_EXPENSE,ITD_EXPENDITURES,
+#                    REGION_CODE, ASIP_APPROVAL_DATE, COUNTRY_CODE, IFC_WBG_JOINT_PROJECT, TOTAL_PROJECT_SIZE, 
+#                    PRIMARY_BUSINESS_LINE_CODE, TOTAL_FUNDING, TOTAL_FUNDS_MANAGED_BY_IFC, Report_Date
+#                    from ifc_gp
+#                    ")
+ifc_gp$IFC_Implementation_End_Date <- as.character(ifc_gp$IFC_Implementation_End_Date)
+ifc_gp$IFC_ASIP_Approval_Date <- as.character(ifc_gp$IFC_ASIP_Approval_Date)
+ifc_gp$IFC_Report_Date <- as.character(ifc_gp$IFC_Report_Date)
 ifc_gp <- ifc_gp %>%
-  group_by(PROJ_ID) %>%
-  filter(Report_Date == max(Report_Date))
+  group_by(IFC_Project_ID) %>%
+  filter(IFC_Report_Date == max(IFC_Report_Date))
 
-# filter project in active, closed or pipeline status?
-# ifc_gp <- filter(ifc_gp, (PROJECT_STAGE=="PIPELINE") | (PROJECT_STATUS %in% c("ACTIVE","CLOSED")))
+# read countries
+#countries <- sqlQuery(EFI_ANALYTICS, "SELECT * FROM Reference.Country")
 
-# create data table
-#write.csv(ifc_gp, "outputFiles/ifc_gpTable.csv",row.names=FALSE)
+# merge with ifc_gp to assign country codes
+#ifc_gp <- merge(ifc_gp,countries, by.x="IFC_Country", by.y="COUNTRY_NAME", all.x=TRUE)
 
 odbcClose(ch) # close connection
 
